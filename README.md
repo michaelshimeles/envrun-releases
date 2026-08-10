@@ -21,5 +21,6 @@ SHA256:zlZge1Zqmjg8ojDlhyLhinBU8o20xpjlb2zpbrAhDJ8
 ```
 
 Published GitHub Releases are immutable: their assets and tags cannot be
-changed or reused. The destination machine requires Linux, Node.js 24,
-OpenSSH, and 1Password CLI, but does not run npm.
+changed or reused. Each release includes an SPDX 2.3 software bill of materials
+and GitHub's immutable-release attestation. The destination machine requires
+Linux, Node.js 24, OpenSSH, and 1Password CLI, but does not run npm.

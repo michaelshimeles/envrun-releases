@@ -31,7 +31,7 @@ jobs:
             '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
           payload_directory=".release/$GITHUB_REF_NAME"
           test -d "$payload_directory"
-          test "$(find "$payload_directory" -maxdepth 1 -type f | wc -l)" -eq 5
+          test "$(find "$payload_directory" -maxdepth 1 -type f | wc -l)" -eq 6
 
           cmp release-signing-key.pub "$payload_directory/release-signing-key.pub"
           release_key=$(awk '{ print $1 " " $2 }' release-signing-key.pub)
@@ -49,6 +49,10 @@ jobs:
           test "$archive_root" = "envrun-$version-linux"
           expected_key=$(awk '{ print $2 }' release-signing-key.pub)
           grep -F "release_signing_key=\"$expected_key\"" envrun-install.sh
+          node -e '
+            const sbom = require(process.argv[1]);
+            if (sbom.spdxVersion !== "SPDX-2.3") process.exit(1);
+          ' "$PWD/envrun.spdx.json"
 
       - name: Create the draft with every release asset
         env:
@@ -61,6 +65,7 @@ jobs:
             "$payload_directory/envrun-linux.tar.gz.sha256" \
             "$payload_directory/envrun-linux.tar.gz.sha256.sig" \
             "$payload_directory/envrun-install.sh" \
+            "$payload_directory/envrun.spdx.json" \
             "$payload_directory/release-signing-key.pub" \
             --draft --verify-tag --title "envrun $GITHUB_REF_NAME" \
             --notes "Immutable, signed Linux release of envrun."
