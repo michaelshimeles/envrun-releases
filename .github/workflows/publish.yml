@@ -51,9 +51,10 @@ jobs:
           test "$(git rev-list -n 1 "$tag")" = "$TRIGGER_SHA"
           test "$(find "$payload_directory" -maxdepth 1 -type f | wc -l)" -eq 6
 
-          printf '%s\n' "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/expected-release-key.pub"
-          cmp "$RUNNER_TEMP/expected-release-key.pub" \
-            "$payload_directory/release-signing-key.pub"
+          test "$(wc -l < "$payload_directory/release-signing-key.pub")" -eq 1
+          actual_release_key=$(awk 'NF >= 2 { print $1 " " $2 }' \
+            "$payload_directory/release-signing-key.pub")
+          test "$actual_release_key" = "$RELEASE_SIGNING_KEY"
           test "$(ssh-keygen -lf "$payload_directory/release-signing-key.pub" | awk '{ print $2 }')" \
             = "$RELEASE_KEY_FINGERPRINT"
           printf 'envrun-release namespaces="envrun-release" %s\n' \
