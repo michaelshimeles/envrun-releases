@@ -49,7 +49,7 @@ jobs:
 
           git fetch --no-tags origin "refs/tags/$tag:refs/tags/$tag"
           test "$(git rev-list -n 1 "$tag")" = "$TRIGGER_SHA"
-          test "$(find "$payload_directory" -maxdepth 1 -type f | wc -l)" -eq 6
+          test "$(find "$payload_directory" -maxdepth 1 -type f | wc -l)" -eq 7
 
           test "$(wc -l < "$payload_directory/release-signing-key.pub")" -eq 1
           actual_release_key=$(awk 'NF >= 2 { print $1 " " $2 }' \
@@ -65,22 +65,25 @@ jobs:
             < "$payload_directory/envrun-release.sha256"
 
           cd "$payload_directory"
-          test "$(wc -l < envrun-release.sha256)" -eq 4
-          for release_file in envrun-linux.tar.gz envrun-install.sh \
-            envrun.spdx.json release-signing-key.pub; do
+          test "$(wc -l < envrun-release.sha256)" -eq 5
+          for release_file in envrun-linux.tar.gz envrun-macos.tar.gz \
+            envrun-install.sh envrun.spdx.json release-signing-key.pub; do
             test "$(awk -v name="$release_file" \
               '$2 == name { count++ } END { print count + 0 }' \
               envrun-release.sha256)" -eq 1
           done
           awk '
             length($1) != 64 || $1 !~ /^[0-9a-f]+$/ { exit 1 }
-            $2 != "envrun-linux.tar.gz" && $2 != "envrun-install.sh" &&
+            $2 != "envrun-linux.tar.gz" && $2 != "envrun-macos.tar.gz" &&
+              $2 != "envrun-install.sh" &&
               $2 != "envrun.spdx.json" && $2 != "release-signing-key.pub" { exit 1 }
           ' envrun-release.sha256
           sha256sum --check --strict envrun-release.sha256
           sh -n envrun-install.sh
-          archive_root=$(tar -tzf envrun-linux.tar.gz | awk -F/ 'NR == 1 { print $1 }')
-          test "$archive_root" = "envrun-$version-linux"
+          for platform in linux macos; do
+            archive_root=$(tar -tzf "envrun-$platform.tar.gz" | awk -F/ 'NR == 1 { print $1 }')
+            test "$archive_root" = "envrun-$version-$platform"
+          done
           expected_key=$(awk '{ print $2 }' release-signing-key.pub)
           grep -F "release_signing_key=\"$expected_key\"" envrun-install.sh
           node -e '
@@ -98,13 +101,14 @@ jobs:
           set -euo pipefail
           gh release create "$RELEASE_TAG" \
             "$PAYLOAD_DIRECTORY/envrun-linux.tar.gz" \
+            "$PAYLOAD_DIRECTORY/envrun-macos.tar.gz" \
             "$PAYLOAD_DIRECTORY/envrun-release.sha256" \
             "$PAYLOAD_DIRECTORY/envrun-release.sha256.sig" \
             "$PAYLOAD_DIRECTORY/envrun-install.sh" \
             "$PAYLOAD_DIRECTORY/envrun.spdx.json" \
             "$PAYLOAD_DIRECTORY/release-signing-key.pub" \
             --draft --verify-tag --title "envrun $RELEASE_TAG" \
-            --notes "Immutable, signed Linux release of envrun."
+            --notes "Immutable, signed Linux and macOS release of envrun."
 
       - name: Publish and lock the release
         env:
