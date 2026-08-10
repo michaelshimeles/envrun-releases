@@ -1,0 +1,71 @@
+name: Publish immutable release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: immutable-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the signed release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify the signed release payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=${GITHUB_REF_NAME#v}
+          printf '%s\n' "$version" | grep -Eq \
+            '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          payload_directory=".release/$GITHUB_REF_NAME"
+          test -d "$payload_directory"
+          test "$(find "$payload_directory" -maxdepth 1 -type f | wc -l)" -eq 5
+
+          cmp release-signing-key.pub "$payload_directory/release-signing-key.pub"
+          release_key=$(awk '{ print $1 " " $2 }' release-signing-key.pub)
+          printf 'envrun-release namespaces="envrun-release" %s\n' "$release_key" \
+            > "$RUNNER_TEMP/allowed_signers"
+          ssh-keygen -Y verify -f "$RUNNER_TEMP/allowed_signers" \
+            -I envrun-release -n envrun-release \
+            -s "$payload_directory/envrun-linux.tar.gz.sha256.sig" \
+            < "$payload_directory/envrun-linux.tar.gz.sha256"
+
+          cd "$payload_directory"
+          sha256sum --check --strict envrun-linux.tar.gz.sha256
+          sh -n envrun-install.sh
+          archive_root=$(tar -tzf envrun-linux.tar.gz | awk -F/ 'NR == 1 { print $1 }')
+          test "$archive_root" = "envrun-$version-linux"
+          expected_key=$(awk '{ print $2 }' release-signing-key.pub)
+          grep -F "release_signing_key=\"$expected_key\"" envrun-install.sh
+
+      - name: Create the draft with every release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          payload_directory=".release/$GITHUB_REF_NAME"
+          gh release create "$GITHUB_REF_NAME" \
+            "$payload_directory/envrun-linux.tar.gz" \
+            "$payload_directory/envrun-linux.tar.gz.sha256" \
+            "$payload_directory/envrun-linux.tar.gz.sha256.sig" \
+            "$payload_directory/envrun-install.sh" \
+            "$payload_directory/release-signing-key.pub" \
+            --draft --verify-tag --title "envrun $GITHUB_REF_NAME" \
+            --notes "Immutable, signed Linux release of envrun."
+
+      - name: Publish and lock the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest

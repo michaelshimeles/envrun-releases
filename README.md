@@ -1,11 +1,25 @@
 # envrun releases
 
-Public, checksum-verified Linux release artifacts for envrun.
+Public, immutable, signed Linux releases for envrun. The source repository is
+private; this repository contains only the installer, compiled release archive,
+checksums, signatures, and release metadata.
 
 Install the latest release:
 
 ```sh
-curl -fsSL https://michaelshimeles.github.io/envrun-releases/install | sh
+curl -fsSL https://github.com/michaelshimeles/envrun-releases/releases/latest/download/envrun-install.sh | sh
 ```
 
-Each `releases/vX.Y.Z/` directory is immutable. The private source repository publishes a compiled archive, its SHA-256 checksum, and the installer from a tagged, tested build. The destination machine requires Node.js 24 but does not run npm.
+For a reproducible installation, use a versioned release URL and pass the same
+version to the installer. The installer verifies the archive checksum and its
+Ed25519 signature before extracting anything.
+
+The release-signing key fingerprint is:
+
+```text
+SHA256:zlZge1Zqmjg8ojDlhyLhinBU8o20xpjlb2zpbrAhDJ8
+```
+
+Published GitHub Releases are immutable: their assets and tags cannot be
+changed or reused. The destination machine requires Linux, Node.js 24,
+OpenSSH, and 1Password CLI, but does not run npm.

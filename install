@@ -3,7 +3,8 @@
 set -eu
 umask 077
 
-release_repository="https://michaelshimeles.github.io/envrun-releases/releases"
+release_repository="https://github.com/michaelshimeles/envrun-releases/releases"
+release_signing_key="AAAAC3NzaC1lZDI1NTE5AAAAIDDUJyFA3KUo0HXdzKUDdNiKE3eNJgY9jwF/PtA+bemH"
 requested_version="latest"
 bin_directory=""
 temporary_directory=""
@@ -59,7 +60,7 @@ done
 
 [ "$(uname -s)" = "Linux" ] || fail "this release supports Linux only"
 for command_name in awk cmp curl cut find flock grep mkdir mktemp mv node rm rmdir \
-  sha256sum tar tr uname wc; do
+  sha256sum ssh-keygen tar tr uname wc; do
   command -v "$command_name" >/dev/null 2>&1 || fail "$command_name is required"
 done
 
@@ -70,9 +71,9 @@ if [ "$requested_version" != "latest" ]; then
   printf '%s\n' "$requested_version" | grep -Eq \
     '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' || \
     fail "invalid version: $requested_version"
-  download_root="$release_repository/v$requested_version"
+  download_root="$release_repository/download/v$requested_version"
 else
-  download_root="$release_repository/latest"
+  download_root="$release_repository/latest/download"
 fi
 
 if [ -n "$bin_directory" ]; then
@@ -85,6 +86,7 @@ fi
 temporary_directory=$(mktemp -d "${TMPDIR:-/tmp}/envrun-install.XXXXXXXX")
 archive="$temporary_directory/envrun-linux.tar.gz"
 checksum_file="$temporary_directory/envrun-linux.tar.gz.sha256"
+signature_file="$temporary_directory/envrun-linux.tar.gz.sha256.sig"
 
 say "Downloading envrun ${requested_version}..."
 curl --proto '=https' --proto-redir '=https' --tlsv1.2 \
@@ -93,6 +95,16 @@ curl --proto '=https' --proto-redir '=https' --tlsv1.2 \
 curl --proto '=https' --proto-redir '=https' --tlsv1.2 \
   --fail --show-error --silent --location \
   "$download_root/envrun-linux.tar.gz.sha256" --output "$checksum_file"
+curl --proto '=https' --proto-redir '=https' --tlsv1.2 \
+  --fail --show-error --silent --location \
+  "$download_root/envrun-linux.tar.gz.sha256.sig" --output "$signature_file"
+
+allowed_signers="$temporary_directory/allowed_signers"
+printf 'envrun-release namespaces="envrun-release" ssh-ed25519 %s\n' \
+  "$release_signing_key" > "$allowed_signers"
+ssh-keygen -Y verify -f "$allowed_signers" -I envrun-release \
+  -n envrun-release -s "$signature_file" < "$checksum_file" >/dev/null 2>&1 || \
+  fail "release signature verification failed"
 
 [ "$(wc -l < "$checksum_file" | tr -d ' ')" = "1" ] || \
   fail "release checksum file is malformed"
