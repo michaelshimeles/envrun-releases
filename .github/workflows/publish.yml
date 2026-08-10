@@ -1,49 +1,82 @@
 name: Publish immutable release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_run:
+    workflows:
+      - Observe staged release
+    types:
+      - completed
 
 permissions:
   contents: write
 
 concurrency:
-  group: immutable-release-${{ github.ref }}
+  group: immutable-release-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: false
 
 jobs:
   release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      RELEASE_SIGNING_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDDUJyFA3KUo0HXdzKUDdNiKE3eNJgY9jwF/PtA+bemH
+      RELEASE_KEY_FINGERPRINT: SHA256:zlZge1Zqmjg8ojDlhyLhinBU8o20xpjlb2zpbrAhDJ8
     steps:
-      - name: Check out the signed release tag
+      - name: Check out the untrusted staged commit by exact digest
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Verify the signed release payload
+        env:
+          TRIGGER_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
-          version=${GITHUB_REF_NAME#v}
+          [[ "$TRIGGER_SHA" =~ ^[0-9a-f]{40}$ ]]
+          mapfile -t payload_directories < <(
+            find .release -mindepth 1 -maxdepth 1 -type d -name 'v*' -print
+          )
+          test "${#payload_directories[@]}" -eq 1
+          payload_directory=${payload_directories[0]}
+          tag=${payload_directory##*/}
+          version=${tag#v}
           printf '%s\n' "$version" | grep -Eq \
             '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
-          payload_directory=".release/$GITHUB_REF_NAME"
-          test -d "$payload_directory"
+
+          git fetch --no-tags origin "refs/tags/$tag:refs/tags/$tag"
+          test "$(git rev-list -n 1 "$tag")" = "$TRIGGER_SHA"
           test "$(find "$payload_directory" -maxdepth 1 -type f | wc -l)" -eq 6
 
-          cmp release-signing-key.pub "$payload_directory/release-signing-key.pub"
-          release_key=$(awk '{ print $1 " " $2 }' release-signing-key.pub)
-          printf 'envrun-release namespaces="envrun-release" %s\n' "$release_key" \
-            > "$RUNNER_TEMP/allowed_signers"
+          printf '%s\n' "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/expected-release-key.pub"
+          cmp "$RUNNER_TEMP/expected-release-key.pub" \
+            "$payload_directory/release-signing-key.pub"
+          test "$(ssh-keygen -lf "$payload_directory/release-signing-key.pub" | awk '{ print $2 }')" \
+            = "$RELEASE_KEY_FINGERPRINT"
+          printf 'envrun-release namespaces="envrun-release" %s\n' \
+            "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/allowed_signers"
           ssh-keygen -Y verify -f "$RUNNER_TEMP/allowed_signers" \
             -I envrun-release -n envrun-release \
-            -s "$payload_directory/envrun-linux.tar.gz.sha256.sig" \
-            < "$payload_directory/envrun-linux.tar.gz.sha256"
+            -s "$payload_directory/envrun-release.sha256.sig" \
+            < "$payload_directory/envrun-release.sha256"
 
           cd "$payload_directory"
-          sha256sum --check --strict envrun-linux.tar.gz.sha256
+          test "$(wc -l < envrun-release.sha256)" -eq 4
+          for release_file in envrun-linux.tar.gz envrun-install.sh \
+            envrun.spdx.json release-signing-key.pub; do
+            test "$(awk -v name="$release_file" \
+              '$2 == name { count++ } END { print count + 0 }' \
+              envrun-release.sha256)" -eq 1
+          done
+          awk '
+            length($1) != 64 || $1 !~ /^[0-9a-f]+$/ { exit 1 }
+            $2 != "envrun-linux.tar.gz" && $2 != "envrun-install.sh" &&
+              $2 != "envrun.spdx.json" && $2 != "release-signing-key.pub" { exit 1 }
+          ' envrun-release.sha256
+          sha256sum --check --strict envrun-release.sha256
           sh -n envrun-install.sh
           archive_root=$(tar -tzf envrun-linux.tar.gz | awk -F/ 'NR == 1 { print $1 }')
           test "$archive_root" = "envrun-$version-linux"
@@ -54,23 +87,25 @@ jobs:
             if (sbom.spdxVersion !== "SPDX-2.3") process.exit(1);
           ' "$PWD/envrun.spdx.json"
 
+          printf 'RELEASE_TAG=%s\n' "$tag" >> "$GITHUB_ENV"
+          printf 'PAYLOAD_DIRECTORY=%s\n' "$payload_directory" >> "$GITHUB_ENV"
+
       - name: Create the draft with every release asset
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          payload_directory=".release/$GITHUB_REF_NAME"
-          gh release create "$GITHUB_REF_NAME" \
-            "$payload_directory/envrun-linux.tar.gz" \
-            "$payload_directory/envrun-linux.tar.gz.sha256" \
-            "$payload_directory/envrun-linux.tar.gz.sha256.sig" \
-            "$payload_directory/envrun-install.sh" \
-            "$payload_directory/envrun.spdx.json" \
-            "$payload_directory/release-signing-key.pub" \
-            --draft --verify-tag --title "envrun $GITHUB_REF_NAME" \
+          gh release create "$RELEASE_TAG" \
+            "$PAYLOAD_DIRECTORY/envrun-linux.tar.gz" \
+            "$PAYLOAD_DIRECTORY/envrun-release.sha256" \
+            "$PAYLOAD_DIRECTORY/envrun-release.sha256.sig" \
+            "$PAYLOAD_DIRECTORY/envrun-install.sh" \
+            "$PAYLOAD_DIRECTORY/envrun.spdx.json" \
+            "$PAYLOAD_DIRECTORY/release-signing-key.pub" \
+            --draft --verify-tag --title "envrun $RELEASE_TAG" \
             --notes "Immutable, signed Linux release of envrun."
 
       - name: Publish and lock the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+        run: gh release edit "$RELEASE_TAG" --draft=false --latest

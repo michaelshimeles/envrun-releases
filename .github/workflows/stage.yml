@@ -1,0 +1,20 @@
+name: Observe staged release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Record the untrusted tag event
+        run: |
+          test "$GITHUB_REF_TYPE" = tag
+          printf 'A protected default-branch workflow will verify %s independently.\n' \
+            "$GITHUB_REF_NAME"
