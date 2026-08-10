@@ -1,0 +1,131 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "@boringcomputers/envrun@0.1.3",
+  "documentNamespace": "http://spdx.org/spdxdocs/@boringcomputers%2fenvrun-0.1.3-83dc027a-d33a-4410-96ca-d46074c62213",
+  "creationInfo": {
+    "created": "2026-08-10T06:41:12.504Z",
+    "creators": [
+      "Tool: npm/cli-11.16.0"
+    ]
+  },
+  "documentDescribes": [
+    "SPDXRef-Package-boringcomputers.envrun-0.1.3"
+  ],
+  "packages": [
+    {
+      "name": "@boringcomputers/envrun",
+      "SPDXID": "SPDXRef-Package-boringcomputers.envrun-0.1.3",
+      "versionInfo": "0.1.3",
+      "packageFileName": "",
+      "description": "Store and link project dotenv sets through 1Password CLI.",
+      "primaryPackagePurpose": "LIBRARY",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40boringcomputers/envrun@0.1.3"
+        }
+      ]
+    },
+    {
+      "name": "dotenv",
+      "SPDXID": "SPDXRef-Package-dotenv-17.4.2",
+      "versionInfo": "17.4.2",
+      "packageFileName": "node_modules/dotenv",
+      "description": "Loads environment variables from .env file",
+      "downloadLocation": "https://registry.npmjs.org/dotenv/-/dotenv-17.4.2.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://github.com/motdotla/dotenv#readme",
+      "licenseDeclared": "BSD-2-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/dotenv@17.4.2"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9c8e14dd3a2db4a01c003f4b2ee77809bedbd90ced40c5047c76ef8531f4f5ba974f19d289ef169e33c02d5fd6302ac967a515fea1c9e8bd373aa3b72dc75867"
+        }
+      ]
+    },
+    {
+      "name": "smol-toml",
+      "SPDXID": "SPDXRef-Package-smol-toml-1.7.1",
+      "versionInfo": "1.7.1",
+      "packageFileName": "node_modules/smol-toml",
+      "description": "A small, fast, and correct TOML parser/serializer",
+      "downloadLocation": "https://registry.npmjs.org/smol-toml/-/smol-toml-1.7.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/smol-toml@1.7.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3cf96cb29019e236cc06ee4330585f5060d02eefefacbe12c8144e552dfbc7cca79d598522cd553c1cf50a8f1792cdd3be921a657994f39cb80eb43e532545a1"
+        }
+      ]
+    },
+    {
+      "name": "zod",
+      "SPDXID": "SPDXRef-Package-zod-4.4.3",
+      "versionInfo": "4.4.3",
+      "packageFileName": "node_modules/zod",
+      "description": "TypeScript-first schema declaration and validation library with static type inference",
+      "downloadLocation": "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://zod.dev",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/zod@4.4.3"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cad10d163209165d94c1882575eda37215b61f09b818914b0e249759d4eb25004837d15cca9ee7e0387124489634024c575fc1a967d6fe4920ef55037072724d"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Package-boringcomputers.envrun-0.1.3",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-dotenv-17.4.2",
+      "relatedSpdxElement": "SPDXRef-Package-boringcomputers.envrun-0.1.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-smol-toml-1.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-boringcomputers.envrun-0.1.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-zod-4.4.3",
+      "relatedSpdxElement": "SPDXRef-Package-boringcomputers.envrun-0.1.3",
+      "relationshipType": "DEPENDENCY_OF"
+    }
+  ]
+}
