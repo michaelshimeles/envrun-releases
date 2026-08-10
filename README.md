@@ -1,6 +1,6 @@
 # envrun releases
 
-Public, immutable, signed Linux releases for envrun. The source repository is
+Public, immutable, signed Linux and macOS releases for envrun. The source repository is
 private; this repository contains only the installer, compiled release archive,
 checksums, signatures, and release metadata.
 
@@ -23,7 +23,7 @@ SHA256:zlZge1Zqmjg8ojDlhyLhinBU8o20xpjlb2zpbrAhDJ8
 Published GitHub Releases are immutable: their assets and tags cannot be
 changed or reused. Each release includes an SPDX 2.3 software bill of materials
 and GitHub's immutable-release attestation. The destination machine requires
-Linux, Node.js 24, OpenSSH, and 1Password CLI, but does not run npm.
+Linux or macOS, Node.js 24, OpenSSH, and 1Password CLI, but does not run npm.
 
 Publication is authorized only by a workflow loaded from the protected default
 branch. Staged tags are treated as untrusted input, and every downloadable asset
