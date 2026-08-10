@@ -1,0 +1,50 @@
+name: Test published installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published envrun version without the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-15
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          check-latest: true
+
+      - name: Install the signed release
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$VERSION" | grep -Eq \
+            '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          smoke_root="$RUNNER_TEMP/envrun-smoke"
+          mkdir -p "$smoke_root/home" "$smoke_root/bin" \
+            "$smoke_root/config" "$smoke_root/cache"
+          curl -fsSLo "$smoke_root/install" \
+            "https://github.com/michaelshimeles/envrun-releases/releases/download/v$VERSION/envrun-install.sh"
+          HOME="$smoke_root/home" \
+            XDG_CONFIG_HOME="$smoke_root/config" \
+            XDG_CACHE_HOME="$smoke_root/cache" \
+            sh "$smoke_root/install" --version "$VERSION" \
+              --bin-dir "$smoke_root/bin"
+          test "$("$smoke_root/bin/envrun" --version)" = "$VERSION"
