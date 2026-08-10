@@ -39,12 +39,15 @@ jobs:
             '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
           smoke_root="$RUNNER_TEMP/envrun-smoke"
           mkdir -p "$smoke_root/home" "$smoke_root/bin" \
-            "$smoke_root/config" "$smoke_root/cache"
+            "$smoke_root/config" "$smoke_root/cache" "$smoke_root/node-bin"
+          cp "$(command -v node)" "$smoke_root/node-bin/node"
+          chmod 0700 "$smoke_root/node-bin/node"
           curl -fsSLo "$smoke_root/install" \
             "https://github.com/michaelshimeles/envrun-releases/releases/download/v$VERSION/envrun-install.sh"
           HOME="$smoke_root/home" \
             XDG_CONFIG_HOME="$smoke_root/config" \
             XDG_CACHE_HOME="$smoke_root/cache" \
+            PATH="$smoke_root/node-bin:/usr/bin:/bin" \
             sh "$smoke_root/install" --version "$VERSION" \
               --bin-dir "$smoke_root/bin"
           test "$("$smoke_root/bin/envrun" --version)" = "$VERSION"
